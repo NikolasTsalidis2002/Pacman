@@ -39,17 +39,53 @@ class Pacman(Entity):
     def closest_pellet(self):
         # get all the pellets there are
         pellets = {k:v for k,v in dict(enumerate(self.pellets.pelletList)).items() if v.name==POWERPELLET}
-        pellets = dict(enumerate(list(pellets.values())))    
-        if len(pellets) != 0:
+        pellets = dict(enumerate(list(pellets.values()))) # reenumerate the dict for power pellets only
+        path_pellets = {k:v for k,v in dict(enumerate(self.pellets.pelletList)).items() if v.name!=POWERPELLET}
+        path_pellets = dict(enumerate(list(path_pellets.values()))) # reenumerate the dict for path pellets only
+        
+        distances_path_pellet_pacman = []
+        for k,pellet in path_pellets.items():
+            goal = pellet.position
+            distance = self.position-goal            
+            distances_path_pellet_pacman.append(distance.magnitudeSquared())
+
+        # from all the closest path pellets there are, chase that one which is furthest away from the ghost        
+        closest_path_pellets = np.where(np.array(distances_path_pellet_pacman) == min(distances_path_pellet_pacman))[0]
+        closest_path_pellets = [path_pellets[i] for i in closest_path_pellets]
+        path_pellets_ghost_distances = [(self.ghost.position-i.position).magnitudeSquared() for i in closest_path_pellets]
+        closest_path_pellet = closest_path_pellets[np.argmax(path_pellets_ghost_distances)]
+
+        # ensure that there are path pellets left. Otherwise return False
+        if len(path_pellets) != 0:
             distances_pellet_pacman = []
             for k,pellet in pellets.items():
                 goal = pellet.position
                 distance = self.position-goal            
                 distances_pellet_pacman.append(distance.magnitudeSquared())
-            closest_pellet = np.argmin(distances_pellet_pacman)        
-            closest_pellet = pellets[closest_pellet]
-            # self.goal = closest_ghost.position        
-            return closest_pellet
+            if len(distances_pellet_pacman) != 0:
+                closest_pellet = np.argmin(distances_pellet_pacman)        
+                closest_pellet = pellets[closest_pellet]
+                # self.goal = closest_ghost.position    
+                print('\t### Closest path pellet --> ',closest_path_pellet,'at distance',distances_path_pellet_pacman[np.argmin(distances_path_pellet_pacman)])
+                print('\t### Closest pellet --> ',closest_pellet,'at distance',distances_pellet_pacman[np.argmin(distances_pellet_pacman)])
+            else:                
+                closest_pellet = None            
+                print('\t### Closest path pellet --> ',closest_path_pellet,'at distance',distances_path_pellet_pacman[np.argmin(distances_path_pellet_pacman)])
+                print('\t### Closest pellet --> ',closest_pellet,'at distance',closest_pellet) 
+            # store these as instance attributes
+            self.closest_path_pellet = closest_path_pellet
+            self.closest_power_pellet = closest_pellet    
+            try: # if it failes that means that there are no more power pellets, so we have to chase path pellets
+                ratio = distances_path_pellet_pacman[np.argmin(distances_path_pellet_pacman)]/distances_pellet_pacman[np.argmin(distances_pellet_pacman)]
+            except:
+                ratio = 0.01
+            print('\t### ratio --> ',ratio)
+            if ratio < 0.3:
+                print('\t\tStill far away from power pellet. Chasing path pellet')
+                return ('path_pellet',closest_path_pellet)
+            else:
+                print('\t\tCloser to power pellet. Chasing power pellet')
+                return ('power_pellet',closest_pellet)
         else:
             return False
     
@@ -121,8 +157,10 @@ class Pacman(Entity):
             vec = self.node.position  + self.directions[direction]*TILEWIDTH - self.goal
             distances.append(vec.magnitudeSquared())
         if mode == 'chasing':
+            print('\t\t\t???',directions,'These are the distances we can choose from when Chasing --> ',distances)
             index = distances.index(min(distances))
         else:
+            print('\t\t\t???',directions,'These are the distances we can choose from when fleeing --> ',distances)
             index = distances.index(max(distances))        
         return directions[index]
 
@@ -138,57 +176,86 @@ class Pacman(Entity):
         closest_ghost = self.ghosts[closest_ghost]
         self.ghost = closest_ghost # this is to keep track of the ghosts. If they FREIGHT we want to be able to eat them even before we get to out Target
         # given on the closest ghosts mode, then we can chase pellets
-        self.closest_ghost = closest_ghost
         self.modes = {0:'scatter',1:'chase',2:'freight',3:'spawn'}
         closest_ghost_mode = closest_ghost.mode.current #self.ghost.mode.current
         print('running away from: ',closest_ghost,self.modes[closest_ghost_mode])  
         
-        if closest_ghost_mode in [0,3]: # if closest ghost is scatter, then chase the pellet
-            current_node = self.node
-            closest_pellet = self.closest_pellet()
-            if not closest_pellet:
-                print('We are since there are no more pellets to collect')
-                self.goal = closest_ghost.position
-                direction = self.goalDirection(directions)
+        closest_pellet = self.closest_pellet()
+        if not closest_pellet: # ensure that there are pellets left. Otherwise flee from ghost
+            print('We are running  since there are no more pellets to collect')
+            self.goal = closest_ghost.position
+            direction = self.goalDirection(directions,mode='fleeing')
+            self.status = 'Fleeing from ghost'
 
-            else: 
+        elif closest_ghost_mode in [0,3]: # if closest ghost is scatter, then chase the pellet
+            current_node = self.node
+            # check if we are to go after a power pellet or not
+            if closest_pellet[0] == 'power_pellet':
+                closest_pellet = closest_pellet[1]
                 for node in self.nodes.nodesLUT.values():
                     if closest_pellet.position == node.position:
                         closest_pellet = node
                 self.goal = closest_pellet.position
                 direction = self.goalDirectionDij(closest_pellet,current_node)
-                print('\tThis is the direction we have decided to take: ',direction)
+                self.status = 'Chasing pellet'
                 
-                if not direction:                
-                    print('We are fleeing from the ghost since the direction was false')
-                    self.goal = closest_ghost.position
-                    direction = self.goalDirection(directions)                                
+                if not direction:    
+                    print('Could not find shortest path for pellet')
+                    if closest_ghost_mode == 3:      
+                        print('\tSo we are going to chase the ghost')
+                        self.goal = closest_ghost.position
+                        direction = self.goalDirection(directions,mode='chasing')
+                        self.status = 'Chasing ghost'                        
+                    else:
+                        print('\tSo we are going to flee from the ghost')
+                        self.goal = closest_ghost.position
+                        direction = self.goalDirection(directions,mode='fleeing') 
+                        self.status = 'Fleeing from ghost'   
+            else:
+                closest_pellet = closest_pellet[1]
+                self.goal = closest_pellet.position
+                direction = self.goalDirection(directions,mode='chasing') 
+                self.status = 'Chasing path pellet'                   
 
         elif closest_ghost_mode == 1: # if the closest ghost is chasing, then run
-            print('We are fleeing from the ghost')
             self.goal = closest_ghost.position
-            direction = self.goalDirection(directions)
+            path_pellet_distance = (self.closest_path_pellet.position-self.position).magnitudeSquared()
+            ghost_distance = (self.goal-self.position).magnitudeSquared()
+            print('\t???power_pellet_distance vs ghost_distance',path_pellet_distance,ghost_distance,ghost_distance/path_pellet_distance)
+            ratio = ghost_distance/path_pellet_distance
+            # ratio of 2 won level one
+            if ratio > 4: # if the ghost is chasing us, but we are still far enough, the follow the pellets
+                print('\t\t###### We are being chased but we are sitll far enough! Chase pellet')
+                self.goal = self.closest_path_pellet.position
+                direction = self.goalDirection(directions,'chasing')
+                self.status = 'Chasing pellet, ghost still not close.'                
+            else:
+                print('\t\t###### We are being chased and ghost too close. Fleee!')
+                direction = self.goalDirection(directions,mode='fleeing')
+                self.status = 'Fleeing from ghost'
         elif closest_ghost_mode == 2: # if the closest ghost is freight, then chase it
-            print('We are chasing the ghost')
             self.goal = closest_ghost.position
+            # print('???? The closest ghost is freight at a position --> ',self.goal)
             direction = self.goalDirection(directions,mode='chasing')
+            self.status = 'Chasing ghost'
          
         return direction
 
         
 
-    def update(self, dt):
-        # check the mode of the ghosts
-        try:
-            print('Ghosts current mode --> ',self.modes[self.ghost.mode.current])
-        except: pass
-        
+    def update(self, dt):        
         self.sprites.update(dt)
         # calculate the new position based on the direction of the previous iteration
         self.position += self.directions[self.direction]*self.speed*dt
         # direction = self.getValidKey() # check that we have pressed a valid keyboard
         direction = self.direction # check that we have pressed a valid keyboard
-        print('position vs target --> ',self.position.__str__(),self.target.position.__str__())
+        
+        # check the mode of the ghosts
+        try:
+            print('position vs target --> ',self.position.__str__(),self.target.position.__str__(),'\t\t||\tGhosts current mode --> ',self.ghost,self.modes[self.ghost.mode.current],'\tPacman status --> ',self.status)        
+        except: 
+            print('position vs target --> ',self.position.__str__(),self.target.position.__str__(),'\t#### failling to print status')
+        print('øøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøø')
         if self.overshotTarget(): # if Pacman has gotten to its target
             print('we have overshot the target __________________####')
             self.node = self.target # update the node we are keeping track of
