@@ -139,6 +139,8 @@ class GameController(object):
                 exit()
             elif event.type == KEYDOWN:
                 if event.key == K_SPACE:
+                    self.paused_check = True # we set this to highlight when we have actually pressed pause
+                    print('self.paused_check --> ',self.paused_check)                    
                     if self.pacman.alive:
                         self.pause.setPause(playerPaused=True)
                         if not self.pause.paused:
@@ -158,7 +160,11 @@ class GameController(object):
                 self.ghosts.inky.startNode.allowAccess(RIGHT, self.ghosts.inky)
             if self.pellets.numEaten == 70:
                 self.ghosts.clyde.startNode.allowAccess(LEFT, self.ghosts.clyde)
-            self.pellets.pelletList.remove(pellet)
+            
+            if pellet in self.pellets.pelletList:
+                self.pellets.pelletList.remove(pellet)
+            else:
+                self.pellets.powerpellets.remove(pellet)
             if pellet.name == POWERPELLET:
                 self.ghosts.startFreight()
             if self.pellets.isEmpty():
@@ -190,6 +196,7 @@ class GameController(object):
                             self.textgroup.showText(GAMEOVERTXT)
                             self.pause.setPause(pauseTime=3, func=self.restartGame)
                         else:
+                            print('-----------------------------------------------')
                             self.pause.setPause(pauseTime=3, func=self.resetLevel)
     
     def checkFruitEvents(self):
@@ -220,7 +227,7 @@ class GameController(object):
         self.pacman.visible = False
         self.ghosts.hide()
 
-    def nextLevel(self):
+    def nextLevel(self):        
         self.showEntities()
         self.level += 1
         self.pause.paused = True
@@ -228,6 +235,8 @@ class GameController(object):
         self.textgroup.updateLevel(self.level)
 
     def restartGame(self):
+        self.restart_game_check = True     
+        print('self.restart_game_check --> ',self.restart_game_check)        
         self.lives = 5
         self.level = 0
         self.pause.paused = True
@@ -239,13 +248,17 @@ class GameController(object):
         self.textgroup.showText(READYTXT)
         self.lifesprites.resetLives(self.lives)
         self.fruitCaptured = []
+        # [][0]
 
     def resetLevel(self):
+        self.reset_level_check = True
         self.pause.paused = True
         self.pacman.reset()
         self.ghosts.reset()
         self.fruit = None
-        self.textgroup.showText(READYTXT)
+        self.textgroup.showText(READYTXT)   
+        print('self.reset_level_check from run.py --> ',self.reset_level_check)
+
 
     def updateScore(self, points):
         self.score += points
