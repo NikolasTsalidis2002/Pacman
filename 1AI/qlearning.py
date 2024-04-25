@@ -1,6 +1,8 @@
 import numpy as np
 import random
 import matplotlib.pyplot as plt
+import pickle
+import datetime
 
 # import pygame
 # from pygame.locals import *
@@ -30,10 +32,12 @@ class QLearning(GameController):
         self.alpha = 0.1  # learning rate
         self.gamma = 0.9  # discount factor
         self.epsilon = 0.9  # exploration rate
-        self.total_episodes = 100
+        self.total_episodes = 1000
 
         self.paused_check = False        
         self.reset_level_check = False
+
+        self.save_qtable = False
 
     def initiate_game(self):
         self.startGame()
@@ -99,7 +103,7 @@ class QLearning(GameController):
         print('\n\t#### we are updating the game')
         # dt = self.clock.tick(10)
         dt = self.clock.tick(30) / 1000.0
-        dt = self.clock.tick(30) / 210.0
+        dt = self.clock.tick(30) / 300.0
         self.pellets.update(dt)
 
          # unpause the game in the case that it is paused and remove the text
@@ -268,16 +272,25 @@ class QLearning(GameController):
                 # Second plot for viewing the durection of the lives (the more the better)
                 plt.figure(2)  # Create a new figure
                 plt.plot(iterations_per_episode_list)
-                for i in range(1,len(iterations_per_episode_list)):
-                    if i%5 == 0:
-                        plt.axvline(i-1)
-
                 plt.title('Iterations per episode')
                 plt.show(block=False)
                 plt.pause(0.001)  # Pause for a brief moment to ensure the plot is rendered
-                                
+
+            if self.save_qtable:
+                if episode%10 == 0 and episode != 0:
+                    # save the Q table as a pickle file
+                    current_time = str(datetime.datetime.now())
+                    with open(f'Qtables/Qtable_{current_time}.pkl', 'wb') as f:
+                        pickle.dump(Q_table, f)                      
+                                    
         # Run the game with the learned policy
         self.Q_table = Q_table
+        
+        if self.save_qtable:
+            # save the Q table as a pickle file
+            current_time = str(datetime.datetime.now())
+            with open(f'Qtables/Qtable_{current_time}.pkl', 'wb') as f:
+                pickle.dump(self.Q_table, f)        
 
 
 
