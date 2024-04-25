@@ -1,3 +1,5 @@
+import os
+os.environ['SDL_AUDIODRIVER'] = 'dummy' 
 import pygame
 from pygame.locals import *
 from constants import *

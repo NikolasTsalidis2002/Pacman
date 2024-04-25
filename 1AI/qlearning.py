@@ -30,7 +30,7 @@ class QLearning(GameController):
         self.alpha = 0.1  # learning rate
         self.gamma = 0.9  # discount factor
         # self.epsilon = 0.9  # exploration rate
-        self.total_episodes = 15
+        self.total_episodes = 1000
 
         # do not touch these!
         self.paused_check = False        
@@ -107,13 +107,13 @@ class QLearning(GameController):
 
         # Closest pellets' positions, also ensure a fixed length
         for i in range(top_n_pellets):
-            if len(closest_pellets) >= i: state.append(closest_pellets[i])
-            else: state.append((np.nan,np.nan))  # Use a placeholder if there are fewer pellets
+            try: state.append(closest_pellets[i])
+            except: state.append((np.nan,np.nan))  # Use a placeholder if there are fewer pellets
         
         # Add all power pellents. Add all missing spaces if required
         for i in range(top_n_pellets):
-            if len(self.powerpellets_positions) >= i: state.append(self.powerpellets_positions[i])
-            else: state.append((np.nan,np.nan))  # Use a placeholder if there are fewer pellets
+            try: state.append(self.powerpellets_positions[i])
+            except: state.append((np.nan,np.nan))  # Use a placeholder if there are fewer pellets
                 
         return tuple(state)
 
@@ -335,5 +335,7 @@ if __name__ == "__main__":
     # ql.getStateRepresentation()
     ql.initiate_game()
     ql.train()
+    current_time = str(datetime.datetime.now())
+    print(f'Ended running at time: {current_time}')
     print('\n\n',ql.Q_table.values())
     
