@@ -29,12 +29,15 @@ class Pacman(Entity):
 
     def update(self, dt, action=None):	
         self.sprites.update(dt)
+        # print('\t\t direction to use to move ---> ',self.direction)
+        # print('\t\tusing this to move --> ',self.directions[self.direction])
         self.position += self.directions[self.direction]*self.speed*dt
         
         if action is None: direction = self.getValidKey()
         else: direction = action
-
+        # print('------> target --> ',self.target.position,'position --> ',self.position)
         if self.overshotTarget():
+            # print('\t\twe have gotten to our target!!  Let us see what happens in the next iteration after this  --------------------')
             self.node = self.target
             if self.node.neighbors[PORTAL] is not None:
                 self.node = self.node.neighbors[PORTAL]
@@ -47,7 +50,7 @@ class Pacman(Entity):
             if self.target is self.node:
                 self.direction = STOP
             self.setPosition()
-        else: 
+        else:      
             if self.oppositeDirection(direction):
                 self.reverseDirection()
 

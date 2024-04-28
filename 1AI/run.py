@@ -27,7 +27,7 @@ class GameController(object):
         self.fruit = None
         self.pause = Pause(True)
         self.level = 0
-        self.lives = 5
+        self.lives = INITIAL_LIVES
         self.score = 0
         self.textgroup = TextGroup()
         self.lifesprites = LifeSprites(self.lives)
@@ -205,7 +205,7 @@ class GameController(object):
         if self.pellets.numEaten == 50 or self.pellets.numEaten == 140:
             if self.fruit is None:
                 self.fruit = Fruit(self.nodes.getNodeFromTiles(9, 20), self.level)
-                print(self.fruit)
+                
         if self.fruit is not None:
             if self.pacman.collideCheck(self.fruit):
                 self.updateScore(self.fruit.points)
@@ -239,7 +239,7 @@ class GameController(object):
     def restartGame(self):
         self.restart_game_check = True     
         print('self.restart_game_check --> ',self.restart_game_check)        
-        self.lives = 5
+        self.lives = INITIAL_LIVES
         self.level = 0
         self.pause.paused = True
         self.fruit = None
