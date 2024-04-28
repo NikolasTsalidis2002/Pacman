@@ -28,26 +28,26 @@ from collections import Counter
 
 
 
-def setup_logging():
-    # Create a custom logger
-    logger = logging.getLogger(__name__)
-    logger.setLevel(logging.INFO)
+# def setup_logging():
+#     # Create a custom logger
+#     logger = logging.getLogger(__name__)
+#     logger.setLevel(logging.INFO)
 
-    # Create handlers
-    c_handler = logging.StreamHandler()  # Console handler
-    f_handler = logging.FileHandler('training.log')  # File handler
+#     # Create handlers
+#     c_handler = logging.StreamHandler()  # Console handler
+#     f_handler = logging.FileHandler('training.log')  # File handler
 
-    # Create formatters and add it to handlers
-    c_format = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-    f_format = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-    c_handler.setFormatter(c_format)
-    f_handler.setFormatter(f_format)
+#     # Create formatters and add it to handlers
+#     c_format = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+#     f_format = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+#     c_handler.setFormatter(c_format)
+#     f_handler.setFormatter(f_format)
 
-    # Add handlers to the logger
-    logger.addHandler(c_handler)
-    logger.addHandler(f_handler)
+#     # Add handlers to the logger
+#     logger.addHandler(c_handler)
+#     logger.addHandler(f_handler)
 
-    return logger
+#     return logger
 
 
 class QLearning(GameController):
@@ -70,42 +70,42 @@ class QLearning(GameController):
         self.plot_performance = plot_performance
         self.comments = comments
 
-        self.qtable_filename = 'Qtables/shared_q_table.pkl'  # Set a common filename for the Q-table
-        self.logger = setup_logging()  # Initialize and assign the logger before any logging operation
-        self.logger.info("QLearning instance created, logger is now active.")
+        # self.qtable_filename = 'Qtables/shared_q_table.pkl'  # Set a common filename for the Q-table
+        # self.logger = setup_logging()  # Initialize and assign the logger before any logging operation
+        # self.logger.info("QLearning instance created, logger is now active.")
 
  
-    def load_q_table(self):
-        filename = self.qtable_filename
-        lock = FileLock(f"{filename}.lock")
-        with lock:
-            if os.path.exists(filename) and os.path.getsize(filename) > 0:  # Check if file exists and is not empty
-                try:
-                    with open(filename, 'rb') as file:
-                        q_table = pickle.load(file)
-                    self.logger.info(f"Loaded Q-table from {filename}.")
-                except Exception as e:
-                    self.logger.error(f"Failed to load Q-table from {filename}: {e}")
-                    q_table = {}  # Initialize Q-table if file is corrupted
-            else:
-                q_table = {}  # Initialize Q-table if file does not exist or is empty
-                self.logger.info("No Q-table found or file is empty. Initializing new Q-table.")
-        return q_table
+    # def load_q_table(self):
+    #     filename = self.qtable_filename
+    #     lock = FileLock(f"{filename}.lock")
+    #     with lock:
+    #         if os.path.exists(filename) and os.path.getsize(filename) > 0:  # Check if file exists and is not empty
+    #             try:
+    #                 with open(filename, 'rb') as file:
+    #                     q_table = pickle.load(file)
+    #                 self.logger.info(f"Loaded Q-table from {filename}.")
+    #             except Exception as e:
+    #                 self.logger.error(f"Failed to load Q-table from {filename}: {e}")
+    #                 q_table = {}  # Initialize Q-table if file is corrupted
+    #         else:
+    #             q_table = {}  # Initialize Q-table if file does not exist or is empty
+    #             self.logger.info("No Q-table found or file is empty. Initializing new Q-table.")
+    #     return q_table
     
     
-    def save_q_table(self, current_q_table):
-        filename = self.qtable_filename
-        lock = FileLock(f"{filename}.lock")
-        with lock:
-            if os.path.exists(filename):
-                with open(filename, 'rb') as file:
-                    existing_q_table = pickle.load(file)
-                merged_q_table = self.merge_q_tables(existing_q_table, current_q_table)
-            else:
-                merged_q_table = current_q_table
-            with open(filename, 'wb') as file:
-                pickle.dump(merged_q_table, file)
-            self.logger.info(f"Saved Q-table to {filename}.")
+    # def save_q_table(self, current_q_table):
+    #     filename = self.qtable_filename
+    #     lock = FileLock(f"{filename}.lock")
+    #     with lock:
+    #         if os.path.exists(filename):
+    #             with open(filename, 'rb') as file:
+    #                 existing_q_table = pickle.load(file)
+    #             merged_q_table = self.merge_q_tables(existing_q_table, current_q_table)
+    #         else:
+    #             merged_q_table = current_q_table
+    #         with open(filename, 'wb') as file:
+    #             pickle.dump(merged_q_table, file)
+    #         self.logger.info(f"Saved Q-table to {filename}.")
 
 
     def merge_q_tables(self, existing_table, new_table):
@@ -231,8 +231,9 @@ class QLearning(GameController):
         
         if self.paused_check: 
             # print('we are in qlearning')
-            # print('self.pause.paused --> ',self.pause.paused)
-            [][0]
+            # print('self.pause.paused --> ',self.pause.paused)            
+            with open(f'Qtables/Qtable_{os.getpid()}.pkl', 'wb') as f:
+                pickle.dump(self.Q_table, f)   
 
         if not self.pause.paused:
             self.ghosts.update(dt)      
@@ -370,7 +371,6 @@ class QLearning(GameController):
                         print(e)
                         self.actions_in_positions[self.pacman.position.asTuple()][desired_action] = 1
 
-                    # if iteration_number > 10: [][0]
                 else:
                     desired_action = max(Q_table[state], key=Q_table[state].get)
                     actions_random_ratio_list.append('best')
@@ -381,6 +381,7 @@ class QLearning(GameController):
                     self.pacman.target = self.pacman.getNewTarget(self.pacman.direction)
 
                 # Take action, observe new state and reward
+                self.Q_table = Q_table
                 self.update_iteration(desired_action=desired_action)
                 
                 # set the action taken as the direction the model us heading todawrds to
@@ -473,24 +474,34 @@ class QLearning(GameController):
                     plt.title('Iterations per episode')
                     plt.show(block=False)
                     plt.pause(0.001)  # Pause for a brief moment to ensure the plot is rendered
+                    plt.savefig(f"Plots/{os.getpid()}.png", format='png')
+            else:
+                if episode%round(self.total_episodes*0.01) == 0 and episode != 0:
+                    # Second plot for viewing the durection of the lives (the more the better)
+                    plt.ioff()  # Turn the interactive mode off
+                    plt.figure()  # Create a new figure
+                    plt.plot(iterations_per_episode_list)
+                    plt.title('Iterations per episode')
+
+                    # Save the plot with a unique filename based on the process ID
+                    filename = f"Plots/{os.getpid()}.png"
+                    plt.savefig(filename, format='png')
+                    print(f"Plot saved as {filename}")
+
+                    plt.close()  # Close the plot to free up system resources
 
             if self.save_qtable:
                 if episode%round(self.total_episodes*0.01) == 0 and episode != 0:
-                    # save the Q table as a pickle file
-                    # current_time = str(datetime.datetime.now())
-                    # with open(f'Qtables/Qtable_{current_time}.pkl', 'wb') as f:
-                    #     pickle.dump(Q_table, f)   
-                    self.save_q_table(Q_table)  # Save the Q-table after modifications                   
+                    # save the Q table as a pickle file                    
+                    with open(f'Qtables/Qtable_{os.getpid()}.pkl', 'wb') as f:
+                        pickle.dump(Q_table, f)   
                                     
         # Run the game with the learned policy
         self.Q_table = Q_table
         
         if self.save_qtable:
-            # # save the Q table as a pickle file
-            # current_time = str(datetime.datetime.now())
-            # with open(f'Qtables/Qtable_{current_time}.pkl', 'wb') as f:
-            #     pickle.dump(self.Q_table, f)        
-            self.save_q_table(Q_table)  # Save the Q-table after modifications
+            with open(f'Qtables/Qtable_{os.getpid()}.pkl', 'wb') as f:
+                pickle.dump(self.Q_table, f)               
 
 
 
