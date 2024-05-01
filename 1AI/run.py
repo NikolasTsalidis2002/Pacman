@@ -54,10 +54,11 @@ class GameController(object):
         self.setBackground()
         self.nodes = NodeGroup(self.mazedata.obj.name+".txt")
         self.mazedata.obj.setPortalPairs(self.nodes)
-        self.mazedata.obj.connectHomeNodes(self.nodes)
-        self.pacman = Pacman(self.nodes.getNodeFromTiles(*self.mazedata.obj.pacmanStart))        
-        self.pellets = PelletGroup(self.mazedata.obj.name+".txt")          
+        self.mazedata.obj.connectHomeNodes(self.nodes)        
+        self.pellets = PelletGroup(self.mazedata.obj.name+".txt")                  
+        self.pacman = Pacman(self.nodes.getNodeFromTiles(*self.mazedata.obj.pacmanStart), pellets=self.pellets, nodes=self.nodes)        
         self.ghosts = GhostGroup(self.nodes.getStartTempNode(), self.pacman)
+        self.pacman.getGhostObject(self.ghosts)    
 
         self.ghosts.pinky.setStartNode(self.nodes.getNodeFromTiles(*self.mazedata.obj.addOffset(2, 3)))
         self.ghosts.inky.setStartNode(self.nodes.getNodeFromTiles(*self.mazedata.obj.addOffset(0, 3)))
@@ -128,7 +129,7 @@ class GameController(object):
                     self.background = self.background_flash
                 else:
                     self.background = self.background_norm
-
+        
         afterPauseMethod = self.pause.update(dt)
         if afterPauseMethod is not None:
             afterPauseMethod()
@@ -179,7 +180,7 @@ class GameController(object):
         for ghost in self.ghosts:
             if self.pacman.collideGhost(ghost):
                 if ghost.mode.current is FREIGHT:
-                    self.ate_ghost = True
+                    self.ateGhost = True
                     self.pacman.visible = False
                     ghost.visible = False
                     self.updateScore(ghost.points)                  
@@ -290,6 +291,7 @@ class GameController(object):
 
 
 if __name__ == "__main__":
+    print(' ------ we are in the main function of the run.py script')
     game = GameController()
     game.startGame()
     while True:

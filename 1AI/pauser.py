@@ -6,6 +6,7 @@ class Pause(object):
         self.func = None
         
     def update(self, dt):
+        # print('\twe are inside the pause update function self.pauseTime --> ',self.pauseTime)
         if self.pauseTime is not None:
             self.timer += dt
             if self.timer >= self.pauseTime:
@@ -17,7 +18,8 @@ class Pause(object):
 
     def setPause(self, playerPaused=False, pauseTime=None, func=None):
         self.timer = 0
-        self.func = func()
+        # print('func --> ',func)
+        self.func = func
         self.pauseTime = pauseTime
         self.flip()
 
