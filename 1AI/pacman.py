@@ -24,6 +24,7 @@ class Pacman(Entity):
         self.directionMethod = self.goalDirection
         self.pacman_comments = pacman_comments
         self.not_qlearning = not_qlearning
+        self.won_game_check = False
 
     def reset(self):
         Entity.reset(self)
@@ -51,7 +52,11 @@ class Pacman(Entity):
             distance = self.position-goal            
             distances_path_pellet_pacman.append(distance.magnitudeSquared())
 
-        # from all the closest path pellets there are, chase that one which is furthest away from the ghost        
+        # from all the closest path pellets there are, chase that one which is furthest away from the ghost  
+        if len(distances_path_pellet_pacman) == 0: 
+            print('WE WON THE GAME!')
+            self.won_game_check = True
+            return False
         closest_path_pellets = np.where(np.array(distances_path_pellet_pacman) == min(distances_path_pellet_pacman))[0]
         closest_path_pellets = [path_pellets[i] for i in closest_path_pellets]
         path_pellets_ghost_distances = [(self.ghost.position-i.position).magnitudeSquared() for i in closest_path_pellets]
@@ -186,6 +191,9 @@ class Pacman(Entity):
         if self.pacman_comments: print('running away from: ',closest_ghost,self.modes[closest_ghost_mode])  
         
         closest_pellet = self.closest_pellet()
+        # if we won the game then stay still
+        if self.won_game_check: return 0
+
         if not closest_pellet: # ensure that there are pellets left. Otherwise flee from ghost
             if self.pacman_comments: print('We are running  since there are no more pellets to collect')
             self.goal = closest_ghost.position
@@ -271,7 +279,6 @@ class Pacman(Entity):
 
             if desired_action is not None: direction = desired_action
             else: direction = self.choose_direction(directions) # this functino is for determing the best direction to take
-
 
             if self.pacman_comments: print('\tThis is the direction we have decided to take --> ',direction)
             # in the case the node in question is a portal, transport to the other end of the portal

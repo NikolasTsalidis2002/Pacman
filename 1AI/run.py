@@ -123,6 +123,8 @@ class GameController(object):
         else:
             self.pacman.update(dt)
 
+        if self.pacman.won_game_check: print('WE HAVE WON BOTH GAMES!! YAY')
+
         if self.flashBG:
             self.flashTimer += dt
             if self.flashTimer >= self.flashTime:

@@ -365,22 +365,50 @@ class QLearning(GameController):
         self.Q_table = Q_table
                
 
+    def update_MergedQTables(self):    
+        qtables_folder = 'Qtables'
+        tables = [i for i in os.listdir(qtables_folder) if i != '.gitattributes']
+                          
+        # open the merged tables pkl file. If it does not exist, set as existing table an empty dict
+        try: 
+            with open(qtables_folder+'/MergedTables.pkl', 'rb') as file: existing_table = pickle.load(file)    
+        except: existing_table = {}
+
+        # go thorugh all the tables there are. Add them on to the existing table dict
+        for t in tables:
+            address = qtables_folder+'/'+t
+            with open(address, 'rb') as file: table = pickle.load(file)    
+            existing_table = ql.merge_q_tables(existing_table=existing_table,new_table=table)
+            # remove the just merged file
+            os.remove(address)
+        # udpate the MergedTables.pkl file
+        with open(qtables_folder+'/MergedTables.pkl', 'wb') as file: pickle.dump(existing_table, file)    
 
 
 
 
 if __name__ == "__main__":
-    ql = QLearning(use_flee_seek_behaviour=True,test_q_table=False,plot_performance=False,save_qtable=True,use_last_saved_q_table=False)
-    # ql.getStateRepresentation()
-    print('we are going to start the game now')
-    ql.initiate_game()
-    print('Game iniated')
-    ql.train()
+    test_q_table = True    
+    if test_q_table: 
+        print('TESTING Q TABLE')
+        ql = QLearning(use_flee_seek_behaviour=False,test_q_table=True,plot_performance=True,
+                                    save_qtable=False,use_last_saved_q_table=True)
+        print('We are going to start the game now')
+        ql.initiate_game()
+        print('Game initiated')
+        ql.train()
         
-    # ql.train()
-    # current_time = str(datetime.datetime.now())
-    # print(f'Ended running at time: {current_time}')
-    # print('\n\n',ql.Q_table.values())
+    else: 
+        print('TRAINING AGENT')
+        ql = QLearning(use_flee_seek_behaviour=True,test_q_table=False,plot_performance=False,
+                       save_qtable=True,use_last_saved_q_table=False)
+        print('We are going to start the game now')
+        ql.initiate_game()
+        print('Game initiated')
+        ql.train()
+        print('Training over. Updating MergedTables.pkl')
+        ql.update_MergedQTables() # udapte the latest qtables
+        
                 
 
     
