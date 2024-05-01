@@ -9,8 +9,8 @@ import random
 
 
 class QLearning(GameController):
-    def __init__(self, save_qtable=False, use_last_saved_q_table=False, plot_performance=True, use_flee_seek_behaviour=False ,comments=False):
-        super().__init__()
+    def __init__(self, save_qtable=True, use_last_saved_q_table=False, plot_performance=True, use_flee_seek_behaviour=False ,comments=False):
+        super().__init__(initial_pause_check=False)
 
         # Q-learning parameters
         self.alpha = 0.1  # learning rate
@@ -389,7 +389,6 @@ class QLearning(GameController):
                                     
         # Run the game with the learned policy
         self.Q_table = Q_table
-        for k,v in Q_table.items(): print(k,v)
         
         if self.save_qtable:
             with open(f'Qtables/Qtable_{os.getpid()}.pkl', 'wb') as f:

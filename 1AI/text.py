@@ -42,11 +42,12 @@ class Text(object):
 
 
 class TextGroup(object):
-    def __init__(self):
+    def __init__(self,initial_text_show=True):
         self.nextid = 10
         self.alltext = {}
         self.setupText()
-        self.showText(READYTXT)
+        if initial_text_show:
+            self.showText(READYTXT)
 
     def addText(self, text, color, x, y, size, time=None, id=None):
         self.nextid += 1

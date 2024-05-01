@@ -17,19 +17,21 @@ from mazedata import MazeData
 
 
 class GameController(object):
-    def __init__(self):
+    def __init__(self,initial_pause_check=True):
         pygame.init()
+        self.initial_pause_check = initial_pause_check
+        self.initial_text_show = initial_pause_check
         self.screen = pygame.display.set_mode(SCREENSIZE, 0, 32)
         self.background = None
         self.background_norm = None
         self.background_flash = None
         self.clock = pygame.time.Clock()
         self.fruit = None
-        self.pause = Pause(True)
+        self.pause = Pause(initial_pause_check)
         self.level = 0
         self.lives = INITIAL_LIVES
         self.score = 0
-        self.textgroup = TextGroup()
+        self.textgroup = TextGroup(self.initial_text_show)
         self.lifesprites = LifeSprites(self.lives)
         self.flashBG = False
         self.flashTime = 0.2
@@ -56,7 +58,7 @@ class GameController(object):
         self.mazedata.obj.setPortalPairs(self.nodes)
         self.mazedata.obj.connectHomeNodes(self.nodes)        
         self.pellets = PelletGroup(self.mazedata.obj.name+".txt")                  
-        self.pacman = Pacman(self.nodes.getNodeFromTiles(*self.mazedata.obj.pacmanStart), pellets=self.pellets, nodes=self.nodes)        
+        self.pacman = Pacman(self.nodes.getNodeFromTiles(*self.mazedata.obj.pacmanStart), pellets=self.pellets, nodes=self.nodes, not_qlearning=self.initial_pause_check)        
         self.ghosts = GhostGroup(self.nodes.getStartTempNode(), self.pacman)
         self.pacman.getGhostObject(self.ghosts)    
 
@@ -242,24 +244,26 @@ class GameController(object):
         print('self.restart_game_check --> ',self.restart_game_check)        
         self.lives = INITIAL_LIVES
         self.level = 0
-        self.pause.paused = True
+        self.pause.paused = self.initial_pause_check
         self.fruit = None
         self.startGame()
         self.score = 0
         self.textgroup.updateScore(self.score)
         self.textgroup.updateLevel(self.level)
-        self.textgroup.showText(READYTXT)
+        if self.initial_text_show:
+            self.textgroup.showText(READYTXT)
         self.lifesprites.resetLives(self.lives)
         self.fruitCaptured = []
         # [][0]
 
     def resetLevel(self):
         self.reset_level_check = True
-        self.pause.paused = True
+        self.pause.paused = self.initial_pause_check
         self.pacman.reset()
         self.ghosts.reset()
         self.fruit = None
-        self.textgroup.showText(READYTXT)   
+        if self.initial_text_show:
+            self.textgroup.showText(READYTXT)   
         print('self.reset_level_check from run.py --> ',self.reset_level_check)
 
 
