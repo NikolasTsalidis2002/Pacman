@@ -198,7 +198,8 @@ class GameController(object):
                         self.pacman.die()               
                         self.ghosts.hide()
                         if self.lives <= 0:
-                            self.textgroup.showText(GAMEOVERTXT)
+                            if self.initial_pause_check:
+                                self.textgroup.showText(GAMEOVERTXT)
                             self.pause.setPause(pauseTime=3, func=self.restartGame)
                         else:
                             print('-----------------------------------------------')
@@ -235,7 +236,8 @@ class GameController(object):
     def nextLevel(self):        
         self.showEntities()
         self.level += 1
-        self.pause.paused = True
+        if self.initial_pause_check:
+            self.pause.paused = True
         self.startGame()
         self.textgroup.updateLevel(self.level)
 

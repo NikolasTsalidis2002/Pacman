@@ -7,9 +7,11 @@ import datetime
 from constants import *
 import random
 
+from collections import Counter
+
 
 class QLearning(GameController):
-    def __init__(self, save_qtable=True, use_last_saved_q_table=False, plot_performance=True, use_flee_seek_behaviour=False ,comments=False):
+    def __init__(self, test_q_table=False, save_qtable=False, use_last_saved_q_table=True, plot_performance=True, use_flee_seek_behaviour=False ,comments=False):
         super().__init__(initial_pause_check=False)
 
         # Q-learning parameters
@@ -30,8 +32,7 @@ class QLearning(GameController):
         self.use_last_saved_q_table = use_last_saved_q_table
         self.plot_performance = plot_performance
         self.comments = comments
-
-        self.dt = self.clock.tick(30) / 2000.0
+        self.test_q_table = test_q_table
 
 
     def merge_q_tables(self, existing_table, new_table):
@@ -58,7 +59,7 @@ class QLearning(GameController):
         qtable_folder = 'Qtables'
         last_dictionary = sorted(list(os.listdir(qtable_folder)))[-1]
         # directory = f'{qtable_folder}/{last_dictionary}'
-        directory = f'{qtable_folder}/MergedTables.pkl'
+        directory = f'{qtable_folder}/{last_dictionary}'
 
         # open the qtable and use that as the starting qtable
         with open(directory, 'rb') as f: loaded_q_table = pickle.load(f)
@@ -104,11 +105,6 @@ class QLearning(GameController):
         
         # get the ghosts statess
         for i in self.ghosts.ghosts:
-            # if i.mode.current == 0: mode = 'scatter'
-            # elif i.mode.current == 1: mode = 'chase'
-            # elif i.mode.current == 2: mode = 'freight'
-            # elif i.mode.current == 3: mode = 'spawn'
-            # state.append(mode)
             state.append(i.mode.current)
 
         # Closest pellets' positions, also ensure a fixed length
@@ -126,15 +122,6 @@ class QLearning(GameController):
 
     # Assume we have a function that can get all possible actions for a given state
     def getLegalActions(self,pacman_position:tuple):
-        # # Returns all legal actions for a given state
-        # if pacman_position in self.nodes_neighbors: 
-        #     self.directions_valid = [k for k in self.nodes_neighbors[pacman_position].keys() if k < 3 and k > -3]
-        #     self.reached_node = True
-        # else: 
-        #     # self.directions_valid = [self.pacman.direction,-1*self.pacman.direction,STOP]
-        #     self.directions_valid = [self.pacman.direction,STOP]
-        #     if len(set(self.directions_valid)) == 1: self.directions_valid.append(2) # if the only actions is to stay still, this likely means we are starting the level again. Add 2 (which means go to the left)
-        #     self.reached_node = False
         self.directions_valid = self.pacman.directions
         return self.directions_valid     
     
@@ -144,8 +131,8 @@ class QLearning(GameController):
         self.ateGhost = False
         # dt = self.clock.tick(10)
         # dt = self.clock.tick(30) / 1000.0
-        # dt = self.clock.tick(30) / 500.0
-        dt = self.clock.tick(30) / 400.0     
+        # dt = self.clock.tick(30) / 400.0     
+        dt = self.clock.tick(30) / 300.0     
         self.dt = dt
 
         self.textgroup.update(dt)
@@ -182,13 +169,6 @@ class QLearning(GameController):
         self.checkEvents()
         self.render()                    
 
-        
-        # if self.paused_check: 
-        #     # print('we are in qlearning')
-        #     # print('self.pause.paused --> ',self.pause.paused)            
-        #     with open(f'Qtables/Qtable_{os.getpid()}.pkl', 'wb') as f:
-        #         pickle.dump(self.Q_table, f)   
-
         # check if a pellet has been eaten
         if self.pellets_numEaten != self.pellets.numEaten:
             self.pellets_numEaten += 1
@@ -196,7 +176,6 @@ class QLearning(GameController):
         else: self.atePellet = False        
 
            
-                
 
     def getReward(self):
         # print('self.atePellet --> ',self.atePellet)
@@ -215,14 +194,17 @@ class QLearning(GameController):
         # find the action to tkae
         rand = np.random.rand()                    
         # this function gives us a rate that is to be used to determine if we do a random action or not (given that the prob is higher or below it)
-        # the closer it is to the end episode, the more likely it will not do a random action                
-        exploration_rate = self.get_exploration_rate(self.episode, self.total_episodes, start=1.0, end=0.01, decay_rate=0.01)
+        # we can use it for training and improving the qtable or testing the qtable
+        if not self.test_q_table: exploration_rate = self.get_exploration_rate(self.episode, self.total_episodes, start=1.0, end=0.01, decay_rate=0.01)
+        else: exploration_rate = self.get_exploration_rate(episode=self.total_episodes,total_episodes=self.total_episodes, start=1.0, end=0.01, decay_rate=0.01)
+
         
         # get the valid actions at the present time                            
-        current_valid_actions = self.current_legal_actions
+        current_valid_actions = list(self.current_legal_actions.keys())
         print('current_valid_actions --> ',current_valid_actions)
 
         # pick an action. Random is random number says so ot the state is not in the qtable
+        print(rand,exploration_rate)
         if rand < exploration_rate or state not in Q_table:
             # this actions is going to be random
             if self.pacman.position.asTuple() not in self.actions_in_positions:
@@ -257,7 +239,7 @@ class QLearning(GameController):
             # this action is going to to be one witht the most rewards in this state
             desired_action = max(Q_table[state], key=Q_table[state].get)
             self.actions_random_ratio_list.append('best')   
-        
+        print('øøøøøøøøøøøøøø This is the ratio of the best and random actions in our list',Counter(self.actions_random_ratio_list))
         return desired_action
 
 
@@ -280,8 +262,8 @@ class QLearning(GameController):
         for self.episode in range(self.total_episodes):   
             print(f'\n---------- {self.episode+1}/{self.total_episodes} -------------- ')
             iteration_number = 0 # keep track of the number of iterations that there are per episode
-
-            # while self.pacman.alive: 
+            self.restart_game_check = False 
+            
             while not self.restart_game_check:
                 # get the current state representation of the game and ensure it is one the Qtable
                 state = self.getStateRepresentation()
@@ -299,17 +281,11 @@ class QLearning(GameController):
                     if len(Q_table) > 2:
                         if list(Q_table[list(Q_table.keys())[-2]].keys()) != list(Q_table[list(Q_table.keys())[-1]].keys()):
                             print('Change in actions --> ',Q_table[list(Q_table.keys())[-1]])                        
+  
+                if not self.use_flee_seek_behaviour: desired_action = self.getAction(Q_table=Q_table,state=state)
+                else: desired_action = None       
 
-
-                # get an action. This is to be used when want to train Pacman without using the flee behaviour
-                if not self.use_flee_seek_behaviour:    
-                    desired_action = self.getAction(Q_table=Q_table,state=og_state)          
-                    # IN THE CASE WHERE HAVE REACHED THE DESIRED TARGET, THERE WILL HAVE ALREADY BEEN SET A NEW TARGET USING AN ACTION SET BEFORE REACHING THE TARGET. SET TARGET TO DEPEND ON THE NEWLY DESIRED ACTION
-                    if self.reached_node:
-                        self.pacman.direction = desired_action
-                        self.pacman.target = self.pacman.getNewTarget(self.pacman.direction)      
-
-                else: desired_action = None          
+                print(f'===================== self.use_flee_seek_behaviour: {self.use_flee_seek_behaviour} \tdesired_action --> ',desired_action)   
 
                 # update iteration
                 self.update_iteration(desired_action=desired_action)
@@ -351,21 +327,21 @@ class QLearning(GameController):
             if self.total_episodes < 100: per = 0.1
             if self.total_episodes < 10: per = 1                        
             if self.plot_performance:            
-                if self.episode%round(self.total_episodes*per) == 0 and self.episode != 0:
-                    # First plot for viewing the action randomness ditribution
-                    plt.figure(1)  # Create a new figure
-                    plt.hist(self.actions_random_ratio_list)
-                    plt.title(self.episode)
-                    plt.show(block=False)
-                    plt.pause(0.001)  # Pause for a brief moment to ensure the plot is rendered
-                    
-                    # Second plot for viewing the durection of the lives (the more the better)
-                    plt.figure(2)  # Create a new figure
-                    plt.plot(self.iterations_per_episode_list)
-                    plt.title('Iterations per episode')
-                    plt.show(block=False)
-                    plt.pause(0.001)  # Pause for a brief moment to ensure the plot is rendered
-                    plt.savefig(f"Plots/{os.getpid()}.png", format='png')
+                # if self.episode%round(self.total_episodes*per) == 0 and self.episode != 0:
+                # First plot for viewing the action randomness ditribution
+                plt.figure(1)  # Create a new figure
+                plt.hist(self.actions_random_ratio_list)
+                plt.title(self.episode)
+                plt.show(block=False)
+                plt.pause(0.001)  # Pause for a brief moment to ensure the plot is rendered
+                
+                # Second plot for viewing the durection of the lives (the more the better)
+                plt.figure(2)  # Create a new figure
+                plt.plot(self.iterations_per_episode_list)
+                plt.title('Iterations per episode')
+                plt.show(block=False)
+                plt.pause(0.001)  # Pause for a brief moment to ensure the plot is rendered
+                plt.savefig(f"Plots/{os.getpid()}.png", format='png')
             else:
                 if self.episode%round(self.total_episodes*per) == 0 and self.episode != 0:
                     # Second plot for viewing the durection of the lives (the more the better)
@@ -382,24 +358,19 @@ class QLearning(GameController):
                     plt.close()  # Close the plot to free up system resources
 
             if self.save_qtable:
-                if self.episode%round(self.total_episodes*per) == 0 and self.episode != 0:
-                    # save the Q table as a pickle file                    
-                    with open(f'Qtables/Qtable_{os.getpid()}.pkl', 'wb') as f:
-                        pickle.dump(Q_table, f)   
+                with open(f'Qtables/Qtable_{os.getpid()}.pkl', 'wb') as f:
+                    pickle.dump(Q_table, f)   
                                     
         # Run the game with the learned policy
         self.Q_table = Q_table
-        
-        if self.save_qtable:
-            with open(f'Qtables/Qtable_{os.getpid()}.pkl', 'wb') as f:
-                pickle.dump(self.Q_table, f)            
+               
 
 
 
 
 
 if __name__ == "__main__":
-    ql = QLearning(use_flee_seek_behaviour=True)
+    ql = QLearning(use_flee_seek_behaviour=True,test_q_table=False,plot_performance=False,save_qtable=True,use_last_saved_q_table=False)
     # ql.getStateRepresentation()
     print('we are going to start the game now')
     ql.initiate_game()
