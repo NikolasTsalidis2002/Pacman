@@ -42,19 +42,12 @@ class Entity(object):
 
             self.setPosition()
           
-    def validDirection(self, direction, copy_node=None):
-        if copy_node is None:
-            if direction is not STOP:
-                if self.name in self.node.access[direction]:
-                    if self.node.neighbors[direction] is not None:
-                        return True
-            return False
-        else:
-            if direction is not STOP:
-                if self.name in copy_node.access[direction]:
-                    if copy_node.neighbors[direction] is not None:
-                        return True
-            return False
+    def validDirection(self, direction):
+        if direction is not STOP:
+            if self.name in self.node.access[direction]:
+                if self.node.neighbors[direction] is not None:
+                    return True
+        return False
 
     def getNewTarget(self, direction):
         if self.validDirection(direction):
@@ -82,10 +75,10 @@ class Entity(object):
                 return True
         return False
 
-    def validDirections(self,copy_node=None):
+    def validDirections(self):
         directions = []
         for key in [UP, DOWN, LEFT, RIGHT]:
-            if self.validDirection(key,copy_node=copy_node):
+            if self.validDirection(key):
                 if key != self.direction * -1:
                     directions.append(key)
         if len(directions) == 0:

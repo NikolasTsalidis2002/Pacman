@@ -204,7 +204,6 @@ class GameController(object):
                                 self.textgroup.showText(GAMEOVERTXT)
                             self.pause.setPause(pauseTime=3, func=self.restartGame)
                         else:
-                            print('-----------------------------------------------')
                             self.pause.setPause(pauseTime=3, func=self.resetLevel)
     
     def checkFruitEvents(self):
@@ -235,7 +234,8 @@ class GameController(object):
         self.pacman.visible = False
         self.ghosts.hide()
 
-    def nextLevel(self):        
+    def nextLevel(self):    
+        self.next_level_check = True             
         self.showEntities()
         self.level += 1
         if self.initial_pause_check:
@@ -244,8 +244,7 @@ class GameController(object):
         self.textgroup.updateLevel(self.level)
 
     def restartGame(self):
-        self.restart_game_check = True     
-        print('self.restart_game_check --> ',self.restart_game_check)        
+        self.restart_game_check = True         
         self.lives = INITIAL_LIVES
         self.level = 0
         self.pause.paused = self.initial_pause_check
@@ -268,7 +267,6 @@ class GameController(object):
         self.fruit = None
         if self.initial_text_show:
             self.textgroup.showText(READYTXT)   
-        print('self.reset_level_check from run.py --> ',self.reset_level_check)
 
 
     def updateScore(self, points):

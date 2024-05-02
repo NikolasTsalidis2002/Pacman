@@ -17,7 +17,6 @@ class Pacman(Entity):
         self.name = PACMAN    
         self.color = YELLOW
         self.direction = LEFT # by default it is going to start looking towards the left          
-        print(self.node.neighbors[LEFT])  
         self.setBetweenNodes(LEFT)      
         self.alive = True
         self.sprites = PacmanSprites(self)
@@ -25,6 +24,8 @@ class Pacman(Entity):
         self.pacman_comments = pacman_comments
         self.not_qlearning = not_qlearning
         self.won_game_check = False
+
+        self.overshot_check = False
 
     def reset(self):
         Entity.reset(self)
@@ -269,13 +270,13 @@ class Pacman(Entity):
             if self.pacman_comments: print('position vs target --> ',self.position.__str__(),self.target.position.__str__(),'\t\t||\tGhosts current mode --> ',self.ghost,self.modes[self.ghost.mode.current],'\tPacman status --> ',self.status)        
         except: 
             if self.pacman_comments: print('position vs target --> ',self.position.__str__(),self.target.position.__str__(),'\t#### failling to print status')
-        if self.pacman_comments: print('øøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøøø')
-
         
         if self.overshotTarget(): # if Pacman has gotten to its target
+            self.overshot_check = True
             if self.pacman_comments: print('we have overshot the target __________________####')
             self.node = self.target # update the node we are keeping track of
             directions = self.validDirections()
+            self.pacman_directions = directions
 
             if desired_action is not None: direction = desired_action
             else: direction = self.choose_direction(directions) # this functino is for determing the best direction to take
@@ -284,14 +285,15 @@ class Pacman(Entity):
             # in the case the node in question is a portal, transport to the other end of the portal
             if self.node.neighbors[PORTAL] is not None:
                 self.node = self.node.neighbors[PORTAL]
-            self.target = self.getNewTarget(direction) # get the new target (vector to go to)
+            try: self.target = self.getNewTarget(direction) # get the new target (vector to go to)
+            except: self.target = self.node
             # check if the target is not the same as the as the node Pacman is currently at
 
             if self.target is not self.node:
                 # if not the same, then make the class direction the direction caused by the key
                 self.direction = direction
             else:
-                if self.pacman_comments: print('\tThe target we had in mind is the same as the current node')
+                print('\t==================================== ==================  The target we had in mind is the same as the current node')
                 # if target is same as node, make target be the node that comes after the current position on the same direction (essentially keep going)
                 self.target = self.getNewTarget(self.direction)
 
