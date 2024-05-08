@@ -293,7 +293,6 @@ class Pacman(Entity):
                 # if not the same, then make the class direction the direction caused by the key
                 self.direction = direction
             else:
-                print('\t==================================== ==================  The target we had in mind is the same as the current node')
                 # if target is same as node, make target be the node that comes after the current position on the same direction (essentially keep going)
                 self.target = self.getNewTarget(self.direction)
 
