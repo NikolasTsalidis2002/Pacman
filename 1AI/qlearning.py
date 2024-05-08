@@ -21,7 +21,8 @@ class QLearning(GameController):
         self.alpha = 0.6  # learning rate
         self.gamma = 0.9  # discount factor
         # self.epsilon = 0.9  # exploration rate
-        self.total_episodes = 1
+        if test_q_table: self.total_episodes = 1
+        else: self.total_episodes = 3
 
         # do not touch these!
         self.paused_check = False        
@@ -61,7 +62,7 @@ class QLearning(GameController):
 
     # method that generates a small random number as a weight for an action
     def initialize_q_values(self, actions):
-        return {action: self.initial_action_reward for action in actions}    
+        # return {action: self.initial_action_reward for action in actions}    
         return {action: np.random.uniform(0.01, 0.1) for action in actions}    
     
 
@@ -157,7 +158,6 @@ class QLearning(GameController):
     
 
     def update_iteration(self, desired_action:int): # the desired action comes from the training. Only activated when not using seek_flee_behavour
-        print('\n\t#### we are updating the game')
         self.ateGhost = False
         # dt = self.clock.tick(10)
         # dt = self.clock.tick(30) / 1000.0
@@ -294,9 +294,7 @@ class QLearning(GameController):
             actions_in_section = []
 
             while not self.restart_game_check:
-                if self.restart_game_check: break
-                
-                print(iteration_number)
+                if self.restart_game_check: break                
 
                 # get the current state representation of the game and ensure it is one the Qtable
                 state = self.getStateRepresentation()                
@@ -308,12 +306,14 @@ class QLearning(GameController):
                 if not self.pause.paused:
                     if len(Q_table) > 2:
                         if list(Q_table[list(Q_table.keys())[-2]].keys()) != list(Q_table[list(Q_table.keys())[-1]].keys()):
-                            # if self.comments:
-                            print('\nChange in actions --> ',Q_table[list(Q_table.keys())[-1]])                        
-                            print('State --> ',state)  
+                            if self.comments:
+                                print('\nChange in actions --> ',Q_table[list(Q_table.keys())[-1]])                        
+                                print('State --> ',state)  
 
                 # determine the type of action to use
-                if not self.use_flee_seek_behaviour: desired_action = self.getAction(Q_table=Q_table,state=state,test_q_table=self.test_q_table)
+                if not self.use_flee_seek_behaviour: 
+                    if np.random.rand() < 0.4: desired_action = None
+                    else: desired_action = self.getAction(Q_table=Q_table,state=state,test_q_table=self.test_q_table)
                 else: 
                     if np.random.rand() < 0.4: desired_action = self.getAction(Q_table=Q_table,state=state,test_q_table=False)
                     else: 
@@ -332,7 +332,7 @@ class QLearning(GameController):
                 
                 # if not self.reset_level_check:s
                 reward = self.getReward() 
-                reward += self.initial_action_reward
+                # reward += self.initial_action_reward
                 rewards_in_section += reward
                 actions_in_section.append(self.action)                
 
@@ -347,12 +347,7 @@ class QLearning(GameController):
 
                         reward_action_responsible = actions_in_section[0]                        
 
-                        print('\n\t============ pacman --> ',self.pacman.position,'\tnode',self.pacman.node.position,'\ttarget',self.pacman.target.position)
                         counter = Counter(self.actions_random_ratio_list)
-                        print('\tQ_table[og_state] --> ',Q_table[og_state])
-                        print('\t\tActions ratio',{k:v/sum(counter.values()) for k,v in counter.items()})
-                        print('\t',actions_in_section,'action that led to rewards --> ',reward_action_responsible)                        
-                        print('\trewards_in_section --> ',rewards_in_section)
                         newState = self.getStateRepresentation()                
                         # update the Q table witht the reward to the action
                         # Q-learning update
@@ -361,12 +356,8 @@ class QLearning(GameController):
                             Q_table[newState] = self.initialize_q_values(new_valid_actions)
                         try:
                             new_reward = (1 - self.alpha) * Q_table[og_state][reward_action_responsible] + self.alpha * (rewards_in_section + self.gamma * max(Q_table[newState].values()))
-                            new_reward += -1*self.initial_action_reward # get rid of the initial weight. Adjust the weight so it it has only the done actions into conisideration
-                            print('\tstate --> ',og_state,'\n\tnewState --> ',newState)
-                            print(f'\tAction: {reward_action_responsible}\tReward: {new_reward}')
+                            # new_reward += -1*self.initial_action_reward # get rid of the initial weight. Adjust the weight so it it has only the done actions into conisideration
                             Q_table[og_state][reward_action_responsible] = new_reward                
-                            print('\tQ_table[og_state] --> ',Q_table[og_state])
-                            print('\tQ_table[new_state] --> ',Q_table[newState])
                             # Transition to the new state
                             state = newState                        
                             self.pacman.overshot_check = False
@@ -509,11 +500,11 @@ class QLearning(GameController):
 
 
 if __name__ == "__main__":
-    test_q_table = False    
+    test_q_table = True    
     if test_q_table: 
         print('TESTING Q TABLE')
         ql = QLearning(use_flee_seek_behaviour=False,test_q_table=True,plot_performance=False,
-                                    save_qtable=True,use_last_saved_q_table=True)
+                                    save_qtable=True,use_last_saved_q_table=True,comments=False)
         print('We are going to start the game now')
         ql.initiate_game()
         print('Game initiated')
@@ -522,7 +513,7 @@ if __name__ == "__main__":
     else: 
         print('TRAINING AGENT')
         ql = QLearning(use_flee_seek_behaviour=True,test_q_table=False,plot_performance=False,
-                       save_qtable=True,use_last_saved_q_table=False)
+                       save_qtable=True,use_last_saved_q_table=False,comments=False)
         print('We are going to start the game now')
         ql.initiate_game()
         print('Game initiated')
